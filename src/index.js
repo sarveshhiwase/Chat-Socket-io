@@ -2,7 +2,6 @@ const path = require("path");
 const http = require("http");
 const express = require("express");
 const socketio = require("socket.io");
-const Filter = require("bad-words");
 const {
   generateMessage,
   generateLocationMessage,
@@ -12,6 +11,7 @@ const {
   getUsersinRoom,
   removeUser,
   addUser,
+  getAvatar,
 } = require("./utils/users");
 
 const app = express();
@@ -32,7 +32,12 @@ io.on("connection", (socket) => {
   //   socket.broadcast.emit("message", generateMessage("A new user has joined!"));
 
   socket.on("join", ({ username, room }, callback) => {
-    const { error, user } = addUser({ id: socket.id, username, room });
+    const { error, user } = addUser({
+      id: socket.id,
+      username,
+      room,
+      avatar: getAvatar(room),
+    });
     if (error) {
       return callback(error);
     }
@@ -53,11 +58,6 @@ io.on("connection", (socket) => {
 
   socket.on("sendMessage", (message, callback) => {
     const user = getUser(socket.id);
-    const filter = new Filter();
-
-    if (filter.isProfane(message)) {
-      return callback("Profanity is not allowed!");
-    }
 
     io.to(user.room).emit("message", generateMessage(user.username, message));
     callback();
